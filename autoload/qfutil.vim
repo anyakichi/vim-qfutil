@@ -1,6 +1,5 @@
 " Quickfix utility
 " Maintainer: INAJIMA Daisuke <inajima@sopht.jp>
-" Version: 0.1
 " License: MIT License
 
 let s:save_cpo = &cpo
@@ -188,6 +187,32 @@ function! qfutil#ltag()
     endif
     call s:execute('ltag', word)
     lwindow
+endfunction
+
+function! s:tquickfix(cmd, args)
+    let cmd = qfutil#_mode() . a:cmd
+    let tabnr = tabpagenr()
+
+    tab split
+
+    execute cmd join(a:args, ' ')
+
+    for bufnr in range(1, winnr('$'))
+	if getwinvar(bufnr, '&buftype') ==# 'quickfix'
+	    return
+	endif
+    endfor
+
+    tabclose
+    execute 'tabnext' tabnr
+endfunction
+
+function! qfutil#tmake(...)
+    call s:tquickfix('make', a:000)
+endfunction
+
+function! qfutil#tgrep(...)
+    call s:tquickfix('grep', a:000)
 endfunction
 
 let &cpo = s:save_cpo
