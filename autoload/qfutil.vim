@@ -212,7 +212,23 @@ function! qfutil#tmake(...)
 endfunction
 
 function! qfutil#tgrep(...)
-    call s:tquickfix('grep', a:000)
+    let args = copy(a:000)
+
+    if a:0 < 1
+	call add(args, expand('<cword>'))
+    endif
+
+    if a:0 < 2
+	call add(args, g:qfutil_default_grep_file)
+    endif
+
+    for i in range(1, len(args) - 1)
+	if isdirectory(args[i])
+	    let args[i] .= '/**'
+	endif
+    endfor
+
+    call s:tquickfix('grep', args)
 endfunction
 
 let &cpo = s:save_cpo

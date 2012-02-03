@@ -11,7 +11,11 @@ let g:loaded_qfutil = 1
 let s:cpo_save = &cpo
 set cpo&vim
 
-command! -nargs=* QFMake :call qfutil#tmake(<q-args>)
-command! -nargs=* -complete=file QFGrep :call qfutil#tgrep(<q-args>)
+if !exists('g:qfutil_default_grep_file')
+    let g:qfutil_default_grep_file = '**'
+endif
+
+command! -nargs=* QFMake :call qfutil#tmake(<f-args>)
+command! -nargs=* -complete=file QFGrep :call qfutil#tgrep(<f-args>)
 
 let &cpo = s:cpo_save
