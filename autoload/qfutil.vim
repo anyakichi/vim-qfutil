@@ -213,6 +213,7 @@ endfunction
 
 function! qfutil#tgrep(...)
     let args = copy(a:000)
+    let dir_count = 0
 
     if a:0 < 1
 	call add(args, expand('<cword>'))
@@ -224,9 +225,16 @@ function! qfutil#tgrep(...)
 
     for i in range(1, len(args) - 1)
 	if isdirectory(args[i])
-	    let args[i] .= '/**'
+	    let dir_count += 1
+	    if &grepprg ==# 'internal'
+		let args[i] .= '/**'
+	    endif
 	endif
     endfor
+
+    if dir_count > 0 && &grepprg !=# 'internal'
+	call insert(args, '-r', 1)
+    endif
 
     call s:tquickfix('grep', args)
 endfunction
