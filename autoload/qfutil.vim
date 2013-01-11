@@ -219,7 +219,7 @@ function! qfutil#tgrep(...)
     endif
 
     if a:0 < 2
-	call add(args, g:qfutil_default_grep_file)
+	call add(args, expand(g:qfutil_default_grep_file))
     endif
 
     for i in range(1, len(args) - 1)
