@@ -14,7 +14,15 @@ function! qfutil#mode()
 endfunction
 
 function! qfutil#_mode()
-    return g:qfutil_mode == 'c' ? '' : g:qfutil_mode
+    return g:qfutil_mode ==# 'c' ? '' : g:qfutil_mode
+endfunction
+
+function! qfutil#invert(mode)
+    return a:mode ==# 'l' ? 'c' : 'l'
+endfunction
+
+function! qfutil#invertmode()
+    return qfutil#invert(qfutil#mode())
 endfunction
 
 function! qfutil#quickfix()
@@ -35,7 +43,21 @@ function! qfutil#toggle()
     endif
 endfunction
 
-function! s:execute(...)
+function! qfutil#winnr()
+    for winnr in range(1, winnr('$'))
+        if getwinvar(winnr, '&buftype') ==# 'quickfix'
+            return winnr
+        endif
+    endfor
+    return -1
+endfunction
+
+function! s:_execute_exn(...)
+    let cmd = join(a:000, ' ')
+    execute cmd
+endfunction
+
+function! s:_execute(...)
     let cmd = join(a:000, ' ')
     try
 	execute cmd
@@ -46,30 +68,73 @@ function! s:execute(...)
     endtry
 endfunction
 
-function! s:execute_with_arg(cmd, arg)
-    let cmd = qfutil#mode() . a:cmd
+function! s:execute(mode, count, cmd, arg, exn)
+    let cmd = (a:count == 0 ? '' : a:count) . a:mode . a:cmd
+    let Execute = a:exn ? function("s:_execute_exn") : function("s:_execute")
     if a:arg == ''
-	call s:execute(cmd)
+        call Execute(cmd)
     else
-	call s:execute(cmd, a:arg)
+        call Execute(cmd, a:arg)
+    endif
+endfunction
+
+function! s:_execute_with_arg(mode, cmd, arg, exn)
+    call s:execute(a:mode, 0, a:cmd, a:arg, a:exn)
+endfunction
+
+function! s:_execute_with_nr(mode, cmd, nr, exn)
+    call s:execute(a:mode, 0, a:cmd, a:nr == 0 ? '' : a:nr, a:exn)
+endfunction
+
+function! s:_execute_with_count(mode, cmd, count, exn)
+    call s:execute(a:mode, a:count, a:cmd, '', a:exn)
+endfunction
+
+function! s:execute_with_arg_fallback(cmd, arg)
+    try
+        call s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 1)
+    catch
+        call s:_execute_with_arg(qfutil#invertmode(), a:cmd, a:arg, 0)
+    endtry
+endfunction
+
+function! s:execute_with_nr_fallback(cmd, nr)
+    try
+        call s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 1)
+    catch
+        call s:_execute_with_nr(qfutil#invertmode(), a:cmd, a:nr, 0)
+    endtry
+endfunction
+
+function! s:execute_with_count_fallback(cmd, count)
+    try
+        call s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 1)
+    catch
+        call s:_execute_with_count(qfutil#invertmode(), a:cmd, a:count, 0)
+    endtry
+endfunction
+
+function! s:execute_with_arg(cmd, arg)
+    if qfutil#winnr() != -1
+        call s:execute_with_arg_fallback(a:cmd, a:arg)
+    else
+        call s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 0)
     endif
 endfunction
 
 function! s:execute_with_nr(cmd, nr)
-    let cmd = qfutil#mode() . a:cmd
-    if a:nr == 0
-	call s:execute(cmd)
+    if qfutil#winnr() != -1
+        call s:execute_with_nr_fallback(a:cmd, a:nr)
     else
-	call s:execute(cmd, a:nr)
+        call s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 0)
     endif
 endfunction
 
-function! s:execute_with_count(cmd, count)
-    let cmd = qfutil#mode() . a:cmd
-    if a:count == 0
-	call s:execute(cmd)
+function! s:execute_with_count(cmd, count, ...)
+    if qfutil#winnr() != -1
+        call s:execute_with_count_fallback(a:cmd, a:count)
     else
-	call s:execute(a:count . cmd)
+        call s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 0)
     endif
 endfunction
 
@@ -168,13 +233,11 @@ function! qfutil#grep(...)
 endfunction
 
 function! qfutil#toggle_window()
-    for bufnr in range(1, winnr('$'))
-	if getwinvar(bufnr, '&buftype') ==# 'quickfix'
-	    call s:execute_with_arg('close', '')
-	    return
-	endif
-    endfor
-    call s:execute_with_arg('window', '')
+    if qfutil#winnr() != -1
+        call s:execute_with_arg('close', '')
+    else
+        call s:execute_with_arg('window', '')
+    endif
 endfunction
 
 function! qfutil#ltag()
@@ -185,7 +248,7 @@ function! qfutil#ltag()
 	echohl None
 	return
     endif
-    call s:execute('ltag', word)
+    call s:_execute('ltag', word)
     lwindow
 endfunction
 
@@ -197,14 +260,11 @@ function! s:tquickfix(cmd, args)
 
     execute cmd join(a:args, ' ')
 
-    for bufnr in range(1, winnr('$'))
-	if getwinvar(bufnr, '&buftype') ==# 'quickfix'
-	    return
-	endif
-    endfor
-
-    tabclose
-    execute 'tabnext' tabnr
+    if qfutil#winnr() == -1
+        " No error in the command output
+        tabclose
+        execute 'tabnext' tabnr
+    endif
 endfunction
 
 function! qfutil#tmake(...)
