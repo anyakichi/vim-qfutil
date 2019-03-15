@@ -37,9 +37,9 @@ endfunction
 
 function! qfutil#toggle()
     if g:qfutil_mode ==# 'l'
-	call qfutil#quickfix()
+        call qfutil#quickfix()
     else
-	call qfutil#loclist()
+        call qfutil#loclist()
     endif
 endfunction
 
@@ -60,11 +60,11 @@ endfunction
 function! s:_execute(...)
     let cmd = join(a:000, ' ')
     try
-	execute cmd
+        execute cmd
     catch
-	echohl ErrorMsg
-	echo substitute(v:exception, '^Vim\%((\a\+)\)\=:', '', '')
-	echohl None
+        echohl ErrorMsg
+        echo substitute(v:exception, '^Vim\%((\a\+)\)\=:', '', '')
+        echohl None
         return v:false
     endtry
     return v:true
@@ -219,27 +219,27 @@ endfunction
 function! qfutil#make(...)
     let cmd = qfutil#_mode() . 'make'
     if a:0 == 0
-	return ":\<C-u>" . cmd . "\<CR>"
+        return ":\<C-u>" . cmd . "\<CR>"
     else
-	return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
+        return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
     endif
 endfunction
 
 function! qfutil#grep(...)
     let cmd = qfutil#_mode() . 'grep'
     if a:0 == 0
-	return ":\<C-u>" . cmd . "\<CR>"
+        return ":\<C-u>" . cmd . "\<CR>"
     else
-	return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
+        return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
     endif
 endfunction
 
 function! qfutil#cscope(...)
     let cmd = qfutil#_mode() . 'cscope'
     if a:0 == 0
-	return ":\<C-u>" . cmd . "\<CR>"
+        return ":\<C-u>" . cmd . "\<CR>"
     else
-	return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
+        return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
     endif
 endfunction
 
@@ -254,10 +254,10 @@ endfunction
 function! qfutil#ltag()
     let word = expand('<cword>')
     if word == ''
-	echohl ErrorMsg
-	echo 'E349: No identifier under cursor'
-	echohl None
-	return
+        echohl ErrorMsg
+        echo 'E349: No identifier under cursor'
+        echohl None
+        return
     endif
     call s:_execute('ltag', word)
     lwindow
@@ -294,24 +294,24 @@ function! qfutil#tgrep(...)
     let dir_count = 0
 
     if a:0 < 1
-	call add(args, expand('<cword>'))
+        call add(args, expand('<cword>'))
     endif
 
     if a:0 < 2
-	call add(args, expand(g:qfutil_default_grep_file))
+        call add(args, expand(g:qfutil_default_grep_file))
     endif
 
     for i in range(1, len(args) - 1)
-	if isdirectory(args[i])
-	    let dir_count += 1
-	    if &grepprg ==# 'internal'
-		let args[i] .= '/**'
-	    endif
-	endif
+        if isdirectory(args[i])
+            let dir_count += 1
+            if &grepprg ==# 'internal'
+                let args[i] .= '/**'
+            endif
+        endif
     endfor
 
     if dir_count > 0 && &grepprg !=# 'internal'
-	call insert(args, '-r', 1)
+        call insert(args, '-r', 1)
     endif
 
     call s:tquickfix('grep', args)
