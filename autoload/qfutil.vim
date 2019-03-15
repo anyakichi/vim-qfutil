@@ -65,76 +65,78 @@ function! s:_execute(...)
 	echohl ErrorMsg
 	echo substitute(v:exception, '^Vim\%((\a\+)\)\=:', '', '')
 	echohl None
+        return v:false
     endtry
+    return v:true
 endfunction
 
 function! s:execute(mode, count, cmd, arg, exn)
     let cmd = (a:count == 0 ? '' : a:count) . a:mode . a:cmd
     let Execute = a:exn ? function("s:_execute_exn") : function("s:_execute")
     if a:arg == ''
-        call Execute(cmd)
+        return Execute(cmd)
     else
-        call Execute(cmd, a:arg)
+        return Execute(cmd, a:arg)
     endif
 endfunction
 
 function! s:_execute_with_arg(mode, cmd, arg, exn)
-    call s:execute(a:mode, 0, a:cmd, a:arg, a:exn)
+    return s:execute(a:mode, 0, a:cmd, a:arg, a:exn)
 endfunction
 
 function! s:_execute_with_nr(mode, cmd, nr, exn)
-    call s:execute(a:mode, 0, a:cmd, a:nr == 0 ? '' : a:nr, a:exn)
+    return s:execute(a:mode, 0, a:cmd, a:nr == 0 ? '' : a:nr, a:exn)
 endfunction
 
 function! s:_execute_with_count(mode, cmd, count, exn)
-    call s:execute(a:mode, a:count, a:cmd, '', a:exn)
+    return s:execute(a:mode, a:count, a:cmd, '', a:exn)
 endfunction
 
 function! s:execute_with_arg_fallback(cmd, arg)
     try
-        call s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 1)
+        return s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 1)
     catch
-        call s:_execute_with_arg(qfutil#invertmode(), a:cmd, a:arg, 0)
+        return s:_execute_with_arg(qfutil#invertmode(), a:cmd, a:arg, 0)
     endtry
 endfunction
 
 function! s:execute_with_nr_fallback(cmd, nr)
     try
-        call s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 1)
+        return s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 1)
     catch
-        call s:_execute_with_nr(qfutil#invertmode(), a:cmd, a:nr, 0)
+        return s:_execute_with_nr(qfutil#invertmode(), a:cmd, a:nr, 0)
     endtry
 endfunction
 
 function! s:execute_with_count_fallback(cmd, count)
     try
-        call s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 1)
+        return s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 1)
     catch
-        call s:_execute_with_count(qfutil#invertmode(), a:cmd, a:count, 0)
+        return s:_execute_with_count(qfutil#invertmode(), a:cmd, a:count, 0)
     endtry
 endfunction
 
 function! s:execute_with_arg(cmd, arg)
     if qfutil#winnr() != -1
-        call s:execute_with_arg_fallback(a:cmd, a:arg)
+        return s:execute_with_arg_fallback(a:cmd, a:arg)
     else
-        call s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 0)
+        return s:_execute_with_arg(qfutil#mode(), a:cmd, a:arg, 0)
     endif
 endfunction
 
 function! s:execute_with_nr(cmd, nr)
     if qfutil#winnr() != -1
-        call s:execute_with_nr_fallback(a:cmd, a:nr)
+        return s:execute_with_nr_fallback(a:cmd, a:nr)
     else
-        call s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 0)
+        return s:_execute_with_nr(qfutil#mode(), a:cmd, a:nr, 0)
     endif
 endfunction
 
 function! s:execute_with_count(cmd, count, ...)
     if qfutil#winnr() != -1
-        call s:execute_with_count_fallback(a:cmd, a:count)
+        return s:execute_with_count_fallback(a:cmd, a:count)
     else
-        call s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 0)
+        return s:_execute_with_count(qfutil#mode(), a:cmd, a:count, 0)
     endif
 endfunction
 
@@ -232,6 +234,15 @@ function! qfutil#grep(...)
     endif
 endfunction
 
+function! qfutil#cscope(...)
+    let cmd = qfutil#_mode() . 'cscope'
+    if a:0 == 0
+	return ":\<C-u>" . cmd . "\<CR>"
+    else
+	return ":\<C-u>" . cmd . ' ' . join(a:000, ' ')
+    endif
+endfunction
+
 function! qfutil#toggle_window()
     if qfutil#winnr() != -1
         call s:execute_with_arg('close', '')
@@ -258,7 +269,14 @@ function! s:tquickfix(cmd, args)
 
     tab split
 
-    execute cmd join(a:args, ' ')
+    let ret = s:execute(qfutil#_mode(), 0, a:cmd, join(a:args, ' '), 0)
+
+    if ret && qfutil#mode() == 'l' && a:cmd == 'cscope'
+        if get(getloclist(0, {'nr': '$'}), 'nr', 0) != 0
+            call s:execute_with_arg('window', '')
+            wincmd w
+        end
+    endif
 
     if qfutil#winnr() == -1
         " No error in the command output
@@ -297,6 +315,10 @@ function! qfutil#tgrep(...)
     endif
 
     call s:tquickfix('grep', args)
+endfunction
+
+function! qfutil#tcscope(...)
+    call s:tquickfix('cscope', a:000)
 endfunction
 
 let &cpo = s:save_cpo

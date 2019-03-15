@@ -15,6 +15,7 @@ if !exists('g:qfutil_default_grep_file')
     let g:qfutil_default_grep_file = '**'
 endif
 
+command! -nargs=* QFCscope :call qfutil#tcscope(<f-args>)
 command! -nargs=* QFMake :call qfutil#tmake(<f-args>)
 command! -nargs=* -complete=file QFGrep :call qfutil#tgrep(<f-args>)
 
